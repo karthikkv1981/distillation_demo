@@ -4,7 +4,7 @@ import gc
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
-STUDENT_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
+STUDENT_ID = "google/gemma-3-270m-it"
 ADAPTER_PATH = "distilled_student_lora"
 
 def generate_response(model, tokenizer, prompt_text):

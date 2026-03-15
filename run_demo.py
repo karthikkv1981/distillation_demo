@@ -55,7 +55,7 @@ def run_script(script_name):
 
 def main():
     print("Starting Knowledge Distillation Demo Pipeline")
-    print("WARNING: This demo requires the Hugging Face `google/gemma-2b-it` model.")
+    print("WARNING: This demo requires the Hugging Face `google/gemma-3-270m-it` model.")
     print("Make sure you have logged in via `huggingface-cli login` and accepted the Gemma terms.")
     print("For full execution, 8GB of RAM + MPS capability on Mac is required.\n")
     

@@ -8,3 +8,5 @@ if __name__ == "__main__":
     
     login(token=args.token, add_to_git_credential=True)
     print("Successfully logged in!")
+
+

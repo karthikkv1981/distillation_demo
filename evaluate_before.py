@@ -3,8 +3,8 @@ import torch
 import gc
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-TEACHER_ID = "google/gemma-2b-it"
-STUDENT_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
+TEACHER_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
+STUDENT_ID = "google/gemma-3-270m-it"
 
 TEST_PROMPTS = [
     "Design a production RAG system for 10M documents",

@@ -41,9 +41,8 @@ def get_prompts():
     return prompts
 
 def main():
-    # We use gemma-2b-it as the teacher. You must have accepted the agreement on HF hub and be logged in via `huggingface-cli login`,
-    # or you can use a non-gated alternative if preferred. Assuming the user has access to gemma.
-    model_id = "google/gemma-2b-it"
+    # We use SmolLM2-360M-Instruct as the teacher.
+    model_id = "HuggingFaceTB/SmolLM2-360M-Instruct"
     print(f"Loading teacher model {model_id} on MPS...")
     
     # Using float16 for standard Mac inference speed

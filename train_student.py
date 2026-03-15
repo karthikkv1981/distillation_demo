@@ -10,7 +10,7 @@ from transformers import (
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from trl import SFTTrainer
 
-STUDENT_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
+STUDENT_ID = "google/gemma-3-270m-it"
 
 def formatting_prompts_func(example):
     output_texts = []
