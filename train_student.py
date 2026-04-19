@@ -1,26 +1,48 @@
-import os
 import torch
+import sys
+import gc
+import os
+import argparse
 from datasets import load_dataset
+
+# Set MPS fallback and disable accelerate progress bars before any torch imports
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+os.environ["ACCELERATE_DISABLE_RICH"] = "1"
+
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
-    TrainingArguments
 )
+from trl import SFTTrainer, SFTConfig
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-from trl import SFTTrainer
+
+def get_device():
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+def cleanup():
+    gc.collect()
+    device = get_device()
+    if device == "cuda":
+        torch.cuda.empty_cache()
+    elif device == "mps":
+        torch.mps.empty_cache()
 
 STUDENT_ID = "google/gemma-3-270m-it"
 
 def formatting_prompts_func(example):
-    output_texts = []
-    for i in range(len(example['instruction'])):
-        text = f"User: {example['instruction'][i]}\n\nAssistant: {example['output'][i]}"
-        output_texts.append(text)
-    return output_texts
+    return f"User: {example['instruction']}\n\nAssistant: {example['output']}"
 
-def main():
-    print(f"Preparing to train {STUDENT_ID}...")
+def main(num_samples=None):
+    device = get_device()
+    print(f"Preparing to train {STUDENT_ID} on {device}...", flush=True)
+    
+    # Pre-load cleanup
+    cleanup()
     
     # Load dataset
     if not os.path.exists("dataset/train.jsonl"):
@@ -29,35 +51,28 @@ def main():
         
     dataset = load_dataset("json", data_files="dataset/train.jsonl", split="train")
     
+    if num_samples is not None and len(dataset) > num_samples:
+        dataset = dataset.select(range(num_samples))
+        print(f"Subsampled dataset to {num_samples} examples for faster training.", flush=True)
+        
     tokenizer = AutoTokenizer.from_pretrained(STUDENT_ID)
     tokenizer.pad_token = tokenizer.eos_token
     
-    # Attempt QLoRA 4-bit setup
-    # Note: 4-bit bitsandbytes has limited support on Mac MPS. We gracefully fallback to float16.
-    try:
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16
-        )
-        print("Attempting to load model in 4-bit precision (QLoRA)...")
-        model = AutoModelForCausalLM.from_pretrained(
-            STUDENT_ID,
-            quantization_config=bnb_config,
-            device_map="auto" 
-        )
-        model = prepare_model_for_kbit_training(model)
-        print("Successfully loaded in 4-bit!")
-    except Exception as e:
-        print(f"\n4-bit quantization fallback activated due to: {e}")
-        print("Falling back to standard float16 LoRA for Apple Silicon MPS compatibility...")
-        model = AutoModelForCausalLM.from_pretrained(
-            STUDENT_ID,
-            torch_dtype=torch.float16,
-            device_map="mps"
-        )
+    # Standard LoRA on MPS (Avoid bitsandbytes/device_map="auto" hangs)
+    print("Loading model weights strictly to CPU (float32)...", flush=True)
+    model = AutoModelForCausalLM.from_pretrained(
+        STUDENT_ID,
+        torch_dtype=torch.float32,
+        low_cpu_mem_usage=False,
+        device_map="cpu"
+    )
+    
+    print(f"Finalizing weights and moving model to {device}...", flush=True)
+    model.tie_weights()
+    model = model.to(device)
+    print("Successfully loaded model for training!", flush=True)
         
+    # Standard LoRA config (Used by SFTTrainer to wrap the model automatically)
     lora_config = LoraConfig(
         r=16,
         lora_alpha=32,
@@ -66,11 +81,7 @@ def main():
         task_type="CAUSAL_LM"
     )
     
-    # Do not modify base weights -- PEFT automatically freezes base weights
-    model = get_peft_model(model, lora_config)
-    model.print_trainable_parameters()
-    
-    training_args = TrainingArguments(
+    sft_config = SFTConfig(
         output_dir="distilled_student_lora",
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
@@ -79,20 +90,20 @@ def main():
         logging_steps=10,
         save_strategy="epoch",
         optim="adamw_torch",
-        use_mps_device=(model.device.type == "mps"),
-        fp16=False, # MPS mixed precision is partial, explicit float16 model weights handles it
+        fp16=False,
         max_grad_norm=0.3,
         warmup_ratio=0.03,
-        lr_scheduler_type="constant"
+        lr_scheduler_type="constant",
+        max_length=1024,
+        report_to="none"
     )
     
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
         peft_config=lora_config,
-        max_seq_length=1024,
-        tokenizer=tokenizer,
-        args=training_args,
+        processing_class=tokenizer,
+        args=sft_config,
         formatting_func=formatting_prompts_func
     )
     
@@ -105,4 +116,7 @@ def main():
     print("Training complete! Adapters saved to 'distilled_student_lora'.")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--num_samples", type=int, default=None, help="Number of synthetic examples to use")
+    args = parser.parse_args()
+    main(args.num_samples)
