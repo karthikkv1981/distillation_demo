@@ -43,7 +43,7 @@ To run the demo, you must authenticate with Hugging Face and have access to the 
     huggingface-cli login
     ```
 
-## Running the Demo
+## Running the Demo (Local)
 
 ```bash
 python3 run_demo.py
@@ -57,6 +57,57 @@ python3 run_demo.py
 > ```bash
 > python3 run_demo.py --num_samples 5
 > ```
+
+## Running on RunPod (Cloud)
+
+If you don't have a local GPU (or want to speed up training), you can run this on [RunPod](https://runpod.io).
+
+### 1. Pod Selection: Secure Cloud vs. Community Cloud
+
+RunPod offers two types of environments. Choose based on your security needs:
+
+| Feature | **Secure Cloud** | **Community Cloud** |
+| :--- | :--- | :--- |
+| **Host** | Tier 3/4 Data Centers (RunPod) | Individual/Peer Providers |
+| **Price** | Standard | **Significant Discounts** |
+| **Reliability** | High (Uptime SLAs) | Variable (Host dependent) |
+| **Privacy** | High security standards | Host has physical access to hardware |
+
+#### Security Mitigation (If using Community Cloud)
+If you choose the cheaper **Community Cloud**, follow these practices to mitigate risks:
+1.  **Use Read-Only Tokens**: Use a [Hugging Face Read-Only token](https://huggingface.co/settings/tokens) rather than a "Write" token.
+2.  **Avoid Storing PII**: Never upload real customer data or PII (Personally Identifiable Information) to a community pod.
+3.  **Environment Variables**: Pass secrets via environment variables or CLI flags rather than hardcoding them into files.
+4.  **Cleanup**: When finished, **Terminate** the pod rather than just stopping it. Termination wipes the workspace (if you aren't using a persistent network volume).
+
+### 2. Pod Setup
+- **GPU**: RTX 3090, RTX 4090, or A5000 is recommended.
+- **Template**: Use the **PyTorch 2.x** template.
+- **Volume**: Allocate at least **20GB** of disk space.
+
+### 2. Deployment Commands
+Once your pod is running, open the terminal and run:
+
+```bash
+# Move to workspace (persistent storage)
+cd /workspace
+
+# Clone the repository
+git clone https://github.com/karthikkv1981/distillation_demo.git
+cd distillation_demo
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Authenticate with Hugging Face (Required for Gemma)
+python3 hf_login.py --token <YOUR_HF_TOKEN>
+
+# Start the demo
+python3 run_demo.py
+```
+
+> [!IMPORTANT]
+> **Persistence**: Always clone into `/workspace`. Files outside of this directory may be lost if the pod is stopped or restarted.
 
 ### What is Knowledge Distillation? (The Layman's Explanation)
 

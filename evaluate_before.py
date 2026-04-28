@@ -120,8 +120,7 @@ def main():
     # Free memory again
     del student_model
     del student_tokenizer
-    gc.collect()
-    torch.mps.empty_cache()
+    cleanup()
         
     # 3. PRINT & SAVE RESULTS
     for i, prompt in enumerate(TEST_PROMPTS):
