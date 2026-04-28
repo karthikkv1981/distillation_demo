@@ -85,7 +85,25 @@ If you choose the cheaper **Community Cloud**, follow these practices to mitigat
 - **Template**: Use the **PyTorch 2.x** template.
 - **Volume**: Allocate at least **20GB** of disk space.
 
-### 2. Deployment Commands
+### 3. SSH Setup (Optional but Recommended)
+For a better terminal experience (like using VS Code Remote or your own terminal), you can enable SSH:
+
+1.  **Generate a Key**: If you don't have one, run this on your **local machine**:
+    ```bash
+    ssh-keygen -t ed25519 -C "runpod"
+    ```
+2.  **Copy your Public Key**:
+    ```bash
+    cat ~/.ssh/id_ed25519.pub
+    ```
+3.  **Add to RunPod**: 
+    - Go to your [RunPod Settings](https://www.runpod.io/console/settings).
+    - Paste the key into the **"SSH Public Keys"** section and save.
+4.  **Connect**: 
+    - When you launch a pod, click **Connect**.
+    - Copy the `ssh` command (e.g., `ssh root@xx.xx.xx.xx -p 1234 -i ~/.ssh/id_ed25519`).
+
+### 4. Deployment Commands
 Once your pod is running, open the terminal and run:
 
 ```bash
