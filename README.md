@@ -127,6 +127,16 @@ python3 run_demo.py
 > [!IMPORTANT]
 > **Persistence**: Always clone into `/workspace`. Files outside of this directory may be lost if the pod is stopped or restarted.
 
+### 5. Managing Costs & Stopping Pods
+
+RunPod charges based on usage. To avoid accidental spending:
+
+*   **Stopping a Pod**: This releases the GPU and stops the hourly GPU charge. However, **you will still be charged for the disk storage** as long as the pod exists in a "Stopped" state.
+*   **Terminating (Deleting) a Pod**: This is the only way to stop **all** charges. It deletes the pod and its associated storage volume.
+
+> [!CAUTION]
+> **Always double-check your [RunPod Console](https://www.runpod.io/console/pods)** to ensure you don't have any pods running or stopped pods consuming storage credits when you are finished with the demo.
+
 ### What is Knowledge Distillation? (The Layman's Explanation)
 
 Think of Knowledge Distillation like a **Master and an Apprentice**. 
