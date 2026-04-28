@@ -34,8 +34,12 @@ def cleanup():
 
 STUDENT_ID = "google/gemma-3-270m-it"
 
-def formatting_prompts_func(example):
-    return f"User: {example['instruction']}\n\nAssistant: {example['output']}"
+def formatting_prompts_func(example, tokenizer):
+    messages = [
+        {"role": "user", "content": example['instruction']},
+        {"role": "assistant", "content": example['output']}
+    ]
+    return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
 
 def main(num_samples=None):
     device = get_device()
@@ -85,15 +89,15 @@ def main(num_samples=None):
         output_dir="distilled_student_lora",
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
-        learning_rate=2e-4,
+        learning_rate=1e-4,  # Lowered from 2e-4 for better stability
         num_train_epochs=3,
-        logging_steps=10,
+        logging_steps=5,
         save_strategy="epoch",
         optim="adamw_torch",
         fp16=False,
         max_grad_norm=0.3,
-        warmup_ratio=0.03,
-        lr_scheduler_type="constant",
+        warmup_ratio=0.1,    # Added warmup for 50+ samples
+        lr_scheduler_type="cosine", # Changed from constant to cosine
         max_length=1024,
         report_to="none"
     )
@@ -104,7 +108,7 @@ def main(num_samples=None):
         peft_config=lora_config,
         processing_class=tokenizer,
         args=sft_config,
-        formatting_func=formatting_prompts_func
+        formatting_func=lambda x: formatting_prompts_func(x, tokenizer)
     )
     
     print("Starting distillation training...")
